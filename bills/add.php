@@ -612,7 +612,7 @@ try {
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <div style="padding: 2rem; text-align: center; color: #718096;">
-                                    No employees found. Please register employees first.
+                                    No employees found. <a href="../employees/register.php" style="color: #667eea;">Register employees first</a>.
                                 </div>
                             <?php endif; ?>
                         </div>
