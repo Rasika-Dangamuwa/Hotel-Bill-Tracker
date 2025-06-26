@@ -1,3 +1,66 @@
+<?php
+/**
+ * Dashboard Page
+ * Hotel Bill Tracking System - Nestle Lanka Limited
+ * 
+ * Main dashboard for account assistants
+ */
+
+// Start session
+session_start();
+
+// Set access flag and include required files
+define('ALLOW_ACCESS', true);
+require_once 'includes/db.php';
+require_once 'includes/auth.php';
+
+// Check if user is logged in
+requireLogin();
+
+// Get current user information
+$currentUser = getCurrentUser();
+$userName = $currentUser['name'];
+$userRole = getUserRoleDisplay();
+
+// Get dashboard statistics
+try {
+    $db = getDB();
+    
+    // Get total bills
+    $totalBills = $db->fetchValue("SELECT COUNT(*) FROM bills") ?: 0;
+    
+    // Get total employees
+    $totalEmployees = $db->fetchValue("SELECT COUNT(*) FROM employees WHERE is_active = 1") ?: 0;
+    
+    // Get total hotels
+    $totalHotels = $db->fetchValue("SELECT COUNT(*) FROM hotels WHERE is_active = 1") ?: 0;
+    
+    // Get current month amount
+    $currentMonth = date('Y-m');
+    $monthlyAmount = $db->fetchValue(
+        "SELECT COALESCE(SUM(total_amount), 0) FROM bills WHERE DATE_FORMAT(created_at, '%Y-%m') = ?",
+        [$currentMonth]
+    ) ?: 0;
+    
+    // Get recent activities (last 10)
+    $recentActivities = $db->fetchAll(
+        "SELECT table_name, action, new_values, created_at, u.name as user_name 
+         FROM audit_log a 
+         LEFT JOIN users u ON a.user_id = u.id 
+         ORDER BY a.created_at DESC 
+         LIMIT 10"
+    );
+    
+} catch (Exception $e) {
+    // Set default values if database queries fail
+    $totalBills = 0;
+    $totalEmployees = 0;
+    $totalHotels = 0;
+    $monthlyAmount = 0;
+    $recentActivities = [];
+    error_log("Dashboard stats error: " . $e->getMessage());
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -155,35 +218,12 @@
             margin-bottom: 1rem;
         }
 
-        .card-hotel {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: white;
-        }
-
-        .card-employee {
-            background: linear-gradient(135deg, #48bb78, #38a169);
-            color: white;
-        }
-
-        .card-bill {
-            background: linear-gradient(135deg, #ed8936, #dd6b20);
-            color: white;
-        }
-
-        .card-view {
-            background: linear-gradient(135deg, #4299e1, #3182ce);
-            color: white;
-        }
-
-        .card-report {
-            background: linear-gradient(135deg, #9f7aea, #805ad5);
-            color: white;
-        }
-
-        .card-settings {
-            background: linear-gradient(135deg, #718096, #4a5568);
-            color: white;
-        }
+        .card-hotel { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+        .card-employee { background: linear-gradient(135deg, #48bb78, #38a169); color: white; }
+        .card-bill { background: linear-gradient(135deg, #ed8936, #dd6b20); color: white; }
+        .card-view { background: linear-gradient(135deg, #4299e1, #3182ce); color: white; }
+        .card-report { background: linear-gradient(135deg, #9f7aea, #805ad5); color: white; }
+        .card-settings { background: linear-gradient(135deg, #718096, #4a5568); color: white; }
 
         .card-title {
             font-size: 1.2rem;
@@ -299,42 +339,6 @@
                 gap: 10px;
             }
         }
-
-        /* Loading Animation */
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 2px solid #e2e8f0;
-            border-radius: 50%;
-            border-top-color: #667eea;
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* Modal styles for future use */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.5);
-        }
-
-        .modal-content {
-            background-color: white;
-            margin: 15% auto;
-            padding: 20px;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 500px;
-        }
     </style>
 </head>
 <body>
@@ -350,8 +354,8 @@
             </div>
             <div class="user-section">
                 <div class="user-info">
-                    <div class="user-name" id="userName">Account Assistant</div>
-                    <div class="user-role" id="userRole">account_assistant</div>
+                    <div class="user-name"><?php echo htmlspecialchars($userName); ?></div>
+                    <div class="user-role"><?php echo htmlspecialchars($userRole); ?></div>
                 </div>
                 <button class="logout-btn" onclick="logout()">Logout</button>
             </div>
@@ -362,27 +366,27 @@
     <main class="main-container">
         <!-- Welcome Section -->
         <section class="welcome-section">
-            <h1 class="welcome-title">Welcome back!</h1>
+            <h1 class="welcome-title">Welcome back, <?php echo htmlspecialchars($currentUser['name']); ?>!</h1>
             <p class="welcome-subtitle">Manage hotel bills and track promotional crew expenses efficiently.</p>
         </section>
 
         <!-- Stats Overview -->
         <section class="stats-grid">
             <div class="stat-card">
-                <div class="stat-number" id="totalBills">-</div>
+                <div class="stat-number"><?php echo number_format($totalBills); ?></div>
                 <div class="stat-label">Total Bills</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number" id="totalEmployees">-</div>
+                <div class="stat-number"><?php echo number_format($totalEmployees); ?></div>
                 <div class="stat-label">Active Employees</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number" id="totalHotels">-</div>
+                <div class="stat-number"><?php echo number_format($totalHotels); ?></div>
                 <div class="stat-label">Registered Hotels</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number" id="monthlyAmount">-</div>
-                <div class="stat-label">This Month (LKR)</div>
+                <div class="stat-number">LKR <?php echo number_format($monthlyAmount, 2); ?></div>
+                <div class="stat-label">This Month</div>
             </div>
         </section>
 
@@ -431,11 +435,57 @@
                 <span>📋</span>
                 Recent Activity
             </h2>
-            <ul class="activity-list" id="activityList">
-                <li class="activity-item">
-                    <span class="activity-text">Loading recent activities...</span>
-                    <span class="activity-time"><div class="loading"></div></span>
-                </li>
+            <ul class="activity-list">
+                <?php if (!empty($recentActivities)): ?>
+                    <?php foreach ($recentActivities as $activity): ?>
+                        <li class="activity-item">
+                            <span class="activity-text">
+                                <?php
+                                $actionText = '';
+                                switch ($activity['action']) {
+                                    case 'LOGIN':
+                                        $actionText = $activity['user_name'] . ' logged in';
+                                        break;
+                                    case 'INSERT':
+                                        $actionText = 'New ' . strtolower($activity['table_name']) . ' record created';
+                                        break;
+                                    case 'UPDATE':
+                                        $actionText = ucfirst($activity['table_name']) . ' record updated';
+                                        break;
+                                    case 'DELETE':
+                                        $actionText = ucfirst($activity['table_name']) . ' record deleted';
+                                        break;
+                                    default:
+                                        $actionText = ucfirst($activity['action']) . ' on ' . $activity['table_name'];
+                                }
+                                echo htmlspecialchars($actionText);
+                                ?>
+                            </span>
+                            <span class="activity-time">
+                                <?php
+                                $time = new DateTime($activity['created_at']);
+                                $now = new DateTime();
+                                $diff = $now->diff($time);
+                                
+                                if ($diff->days > 0) {
+                                    echo $diff->days . 'd ago';
+                                } elseif ($diff->h > 0) {
+                                    echo $diff->h . 'h ago';
+                                } elseif ($diff->i > 0) {
+                                    echo $diff->i . 'm ago';
+                                } else {
+                                    echo 'Just now';
+                                }
+                                ?>
+                            </span>
+                        </li>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <li class="activity-item">
+                        <span class="activity-text">No recent activities found</span>
+                        <span class="activity-time">-</span>
+                    </li>
+                <?php endif; ?>
             </ul>
         </section>
     </main>
@@ -443,173 +493,15 @@
     <script>
         // Navigation function
         function navigateTo(page) {
-            // Add loading state
-            event.target.style.opacity = '0.7';
-            event.target.style.pointerEvents = 'none';
-            
-            // Simulate navigation (replace with actual page navigation)
-            setTimeout(() => {
-                window.location.href = page;
-            }, 300);
+            window.location.href = page;
         }
 
         // Logout function
         function logout() {
             if (confirm('Are you sure you want to logout?')) {
-                // Add loading state
-                document.querySelector('.logout-btn').innerHTML = '<div class="loading"></div>';
-                
-                // Simulate logout process
-                setTimeout(() => {
-                    window.location.href = 'logout.php';
-                }, 1000);
+                window.location.href = 'logout.php';
             }
         }
-
-        // Load dashboard statistics
-        async function loadDashboardStats() {
-            try {
-                const response = await fetch('api/dashboard_stats.php');
-                const data = await response.json();
-                
-                if (data.success) {
-                    document.getElementById('totalBills').textContent = data.stats.total_bills || '0';
-                    document.getElementById('totalEmployees').textContent = data.stats.total_employees || '0';
-                    document.getElementById('totalHotels').textContent = data.stats.total_hotels || '0';
-                    document.getElementById('monthlyAmount').textContent = formatCurrency(data.stats.monthly_amount || 0);
-                }
-            } catch (error) {
-                console.error('Error loading stats:', error);
-                // Set default values on error
-                document.getElementById('totalBills').textContent = '0';
-                document.getElementById('totalEmployees').textContent = '0';
-                document.getElementById('totalHotels').textContent = '0';
-                document.getElementById('monthlyAmount').textContent = 'LKR 0';
-            }
-        }
-
-        // Load recent activity
-        async function loadRecentActivity() {
-            try {
-                const response = await fetch('api/recent_activity.php');
-                const data = await response.json();
-                
-                const activityList = document.getElementById('activityList');
-                
-                if (data.success && data.activities.length > 0) {
-                    activityList.innerHTML = data.activities.map(activity => `
-                        <li class="activity-item">
-                            <span class="activity-text">${activity.description}</span>
-                            <span class="activity-time">${formatTime(activity.created_at)}</span>
-                        </li>
-                    `).join('');
-                } else {
-                    activityList.innerHTML = `
-                        <li class="activity-item">
-                            <span class="activity-text">No recent activities found</span>
-                            <span class="activity-time">-</span>
-                        </li>
-                    `;
-                }
-            } catch (error) {
-                console.error('Error loading activities:', error);
-                document.getElementById('activityList').innerHTML = `
-                    <li class="activity-item">
-                        <span class="activity-text">Unable to load recent activities</span>
-                        <span class="activity-time">-</span>
-                    </li>
-                `;
-            }
-        }
-
-        // Format currency
-        function formatCurrency(amount) {
-            return new Intl.NumberFormat('en-LK', {
-                style: 'currency',
-                currency: 'LKR',
-                minimumFractionDigits: 0,
-                maximumFractionDigits: 0
-            }).format(amount);
-        }
-
-        // Format time
-        function formatTime(dateString) {
-            const date = new Date(dateString);
-            const now = new Date();
-            const diffMs = now - date;
-            const diffMins = Math.floor(diffMs / 60000);
-            const diffHours = Math.floor(diffMins / 60);
-            const diffDays = Math.floor(diffHours / 24);
-
-            if (diffMins < 1) return 'Just now';
-            if (diffMins < 60) return `${diffMins}m ago`;
-            if (diffHours < 24) return `${diffHours}h ago`;
-            if (diffDays < 7) return `${diffDays}d ago`;
-            
-            return date.toLocaleDateString('en-LK');
-        }
-
-        // Load user information
-        function loadUserInfo() {
-            // This would typically fetch from session/API
-            // For now, using placeholder data
-            const userData = {
-                name: 'Priyanka Silva',
-                role: 'Account Assistant',
-                email: 'accounts@nestle.lk'
-            };
-            
-            document.getElementById('userName').textContent = userData.name;
-            document.getElementById('userRole').textContent = userData.role;
-        }
-
-        // Initialize dashboard
-        document.addEventListener('DOMContentLoaded', function() {
-            loadUserInfo();
-            loadDashboardStats();
-            loadRecentActivity();
-            
-            // Refresh stats every 5 minutes
-            setInterval(() => {
-                loadDashboardStats();
-                loadRecentActivity();
-            }, 300000);
-        });
-
-        // Add keyboard shortcuts
-        document.addEventListener('keydown', function(e) {
-            if (e.ctrlKey || e.metaKey) {
-                switch(e.key) {
-                    case '1':
-                        e.preventDefault();
-                        navigateTo('hotels/register.php');
-                        break;
-                    case '2':
-                        e.preventDefault();
-                        navigateTo('employees/register.php');
-                        break;
-                    case '3':
-                        e.preventDefault();
-                        navigateTo('bills/add.php');
-                        break;
-                    case '4':
-                        e.preventDefault();
-                        navigateTo('bills/view.php');
-                        break;
-                }
-            }
-        });
-
-        // Add smooth transitions for better UX
-        document.querySelectorAll('.dashboard-card').forEach(card => {
-            card.addEventListener('mouseenter', function() {
-                this.style.transform = 'translateY(-4px)';
-            });
-            
-            card.addEventListener('mouseleave', function() {
-                this.style.transform = 'translateY(0)';
-            });
-        });
     </script>
 </body>
 </html>

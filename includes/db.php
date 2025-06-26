@@ -268,6 +268,4 @@ function dbExecute($sql, $params = []) {
     return $db->execute($sql, $params);
 }
 
-// Set flag to allow access to this file
-define('ALLOW_ACCESS', true);
 ?>

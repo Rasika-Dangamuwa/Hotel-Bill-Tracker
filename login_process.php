@@ -1,9 +1,7 @@
 <?php
 /**
- * Login Process Handler
+ * Login Process Handler - Simplified
  * Hotel Bill Tracking System - Nestle Lanka Limited
- * 
- * Handles user authentication and session management
  */
 
 // Start session
@@ -12,7 +10,11 @@ session_start();
 // Set content type for JSON response
 header('Content-Type: application/json');
 
-// Allow access to database file
+// Enable error reporting for debugging
+ini_set('display_errors', 0); // Turn off for production
+error_reporting(E_ALL);
+
+// Set the access flag
 define('ALLOW_ACCESS', true);
 
 // Include database connection
@@ -35,11 +37,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 try {
     // Get JSON input
-    $input = json_decode(file_get_contents('php://input'), true);
+    $rawInput = file_get_contents('php://input');
+    $input = json_decode($rawInput, true);
+    
+    // Debug logging
+    error_log("Raw input: " . $rawInput);
+    error_log("Decoded input: " . print_r($input, true));
     
     // Check if JSON decoding was successful
     if (json_last_error() !== JSON_ERROR_NONE) {
-        sendResponse(false, 'Invalid JSON data');
+        sendResponse(false, 'Invalid JSON data: ' . json_last_error_msg());
     }
     
     // Validate required fields
@@ -58,34 +65,25 @@ try {
     // Get database connection
     $db = getDB();
     
-    // Find user by email (simplified query for debugging)
+    // Find user by email (simple query)
     $user = $db->fetchRow(
-        "SELECT id, name, email, password, role, is_active FROM users WHERE email = ?",
+        "SELECT id, name, email, password, role FROM users WHERE email = ?",
         [$email]
     );
     
     // Debug: Log the query result
     error_log("Login attempt for: " . $email);
-    error_log("User found: " . ($user ? 'Yes' : 'No'));
+    error_log("User found: " . ($user ? 'Yes - ID: ' . $user['id'] : 'No'));
     
     // Check if user exists
     if (!$user) {
         sendResponse(false, 'Invalid email or password');
     }
     
-    // Check if user is active (only if is_active column exists)
-    if (isset($user['is_active']) && !$user['is_active']) {
-        sendResponse(false, 'Your account has been deactivated. Please contact administrator.');
-    }
-    
     // Verify password
     if (!password_verify($password, $user['password'])) {
+        error_log("Password verification failed for user: " . $email);
         sendResponse(false, 'Invalid email or password');
-    }
-    
-    // Check if user is active
-    if (isset($user['is_active']) && !$user['is_active']) {
-        sendResponse(false, 'Your account has been deactivated. Please contact administrator.');
     }
     
     // Login successful - create session
@@ -96,7 +94,7 @@ try {
     $_SESSION['login_time'] = time();
     $_SESSION['last_activity'] = time();
     
-    // Log successful login (only if audit_log table exists)
+    // Log successful login (optional - skip if audit_log table doesn't exist)
     try {
         $db->query(
             "INSERT INTO audit_log (table_name, record_id, action, new_values, user_id, ip_address) VALUES (?, ?, ?, ?, ?, ?)",
@@ -109,9 +107,10 @@ try {
                 $_SERVER['REMOTE_ADDR'] ?? 'unknown'
             ]
         );
+        error_log("Audit log entry created for user: " . $email);
     } catch (Exception $e) {
-        // If audit_log table doesn't exist, just log to PHP error log
-        error_log("Audit log failed (table might not exist): " . $e->getMessage());
+        // Just log the error, don't fail the login
+        error_log("Audit log failed: " . $e->getMessage());
     }
     
     // Send success response
@@ -126,10 +125,11 @@ try {
     ]);
     
 } catch (Exception $e) {
-    // Log error
+    // Log detailed error
     error_log("Login error: " . $e->getMessage());
+    error_log("Stack trace: " . $e->getTraceAsString());
     
     // Send error response
-    sendResponse(false, 'An error occurred during login. Please try again.');
+    sendResponse(false, 'Database connection error. Please try again.');
 }
 ?>
