@@ -491,8 +491,46 @@ try {
             border-radius: 4px;
         }
 
+        .conflict-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .view-bill-btn, .edit-bill-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+            min-width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .view-bill-btn:hover {
+            background: #5a6fd8;
+            transform: scale(1.1);
+        }
+
+        .edit-bill-btn {
+            background: #48bb78;
+        }
+
+        .edit-bill-btn:hover {
+            background: #38a169;
+            transform: scale(1.1);
+        }
+
         .conflict-item:hover {
             background: #fed7aa;
+            border-radius: 6px;
+            transform: translateX(2px);
         }
 
         .conflict-item:last-child {
@@ -1198,14 +1236,18 @@ try {
             calculateTotal();
         }
 
-        // Update date range and refresh employee availability
+        // Update date range and refresh employee availability (IMPROVED)
         function updateDateRange() {
             const checkIn = document.getElementById('check_in').value;
             const checkOut = document.getElementById('check_out').value;
             
             if (checkIn && checkOut) {
-                billStartDate = new Date(checkIn);
-                billEndDate = new Date(checkOut);
+                const newBillStartDate = new Date(checkIn);
+                const newBillEndDate = new Date(checkOut);
+                
+                // Update global date variables
+                billStartDate = newBillStartDate;
+                billEndDate = newBillEndDate;
                 
                 // Update all selected employees with new date constraints
                 selectedEmployees.forEach((employee, employeeId) => {
@@ -1217,14 +1259,30 @@ try {
                         employee.checkOut = checkOut;
                     }
                     
-                    // Re-check conflicts for this employee
-                    checkSingleEmployeeConflicts(employeeId);
+                    // Update the employee in the map
+                    selectedEmployees.set(employeeId, employee);
                 });
                 
+                // Refresh the employee list display to show updated dates
                 refreshSelectedEmployeesList();
                 calculateTotal();
                 
-                // Refresh employee availability in modal
+                // Re-check conflicts for all selected employees with new dates
+                selectedEmployees.forEach(async (employee, employeeId) => {
+                    try {
+                        const conflicts = await checkEmployeeConflicts(employeeId, employee.checkIn, employee.checkOut);
+                        employee.conflicts = conflicts;
+                        employee.hasConflicts = conflicts.length > 0;
+                        selectedEmployees.set(employeeId, employee);
+                        
+                        // Refresh the display after conflict check
+                        refreshSelectedEmployeesList();
+                    } catch (error) {
+                        console.error('Error rechecking conflicts for employee:', employeeId, error);
+                    }
+                });
+                
+                // Refresh employee availability in modal if open
                 setTimeout(() => {
                     checkEmployeeAvailability();
                 }, 500);
@@ -1380,7 +1438,22 @@ try {
         function removeEmployee(employeeId) {
             if (confirm('Remove this employee from the bill?')) {
                 selectedEmployees.delete(employeeId);
-                refreshSelectedEmployeesList();
+                
+                // Update count immediately
+                document.getElementById('selectedEmployeeCount').textContent = selectedEmployees.size;
+                
+                // If no employees left, show the "no employees" message
+                if (selectedEmployees.size === 0) {
+                    const container = document.getElementById('selectedEmployeesList');
+                    const noMessage = document.getElementById('noEmployeesMessage');
+                    container.innerHTML = '';
+                    container.appendChild(noMessage);
+                    noMessage.style.display = 'block';
+                } else {
+                    // Refresh the list to remove the employee card
+                    refreshSelectedEmployeesList();
+                }
+                
                 calculateTotal();
                 
                 // Update status in modal if open
@@ -1431,23 +1504,30 @@ try {
             checkSingleEmployeeConflicts(employeeId);
         }
 
-        // Refresh the selected employees list display (ENHANCED)
+        // Refresh the selected employees list display (FIXED)
         function refreshSelectedEmployeesList() {
             const container = document.getElementById('selectedEmployeesList');
             const noMessage = document.getElementById('noEmployeesMessage');
             const countSpan = document.getElementById('selectedEmployeeCount');
             
+            // Update count
             countSpan.textContent = selectedEmployees.size;
             
+            // If no employees selected, show the "no employees" message
             if (selectedEmployees.size === 0) {
-                noMessage.style.display = 'block';
-                container.innerHTML = '';
-                container.appendChild(noMessage);
+                container.innerHTML = `
+                    <div class="no-employees-message" id="noEmployeesMessage">
+                        <div style="text-align: center; padding: 2rem; color: #718096;">
+                            <div style="font-size: 3rem; margin-bottom: 1rem;">👥</div>
+                            <h4>No Employees Assigned</h4>
+                            <p>Click "Add Employee to Bill" to assign crew members to this hotel bill.</p>
+                        </div>
+                    </div>
+                `;
                 return;
             }
             
-            noMessage.style.display = 'none';
-            
+            // Generate HTML for all selected employees
             let html = '';
             selectedEmployees.forEach((employee, employeeId) => {
                 const checkInDate = new Date(employee.checkIn);
@@ -1465,9 +1545,10 @@ try {
                             ${employee.conflicts.map(conflict => {
                                 return `
                                     <div class="conflict-item" 
-                                         onmouseover="showConflictDetails(${conflict.bill_id}, '${conflict.invoice}', '${conflict.hotel}', '${conflict.bill_details.check_in}', '${conflict.bill_details.check_out}', '${conflict.bill_details.total_amount}', '${conflict.bill_details.submitted_by}')" 
-                                         onmouseout="hideConflictDetails()"
-                                         style="cursor: pointer;">
+                                         onclick="openBillInNewTab(${conflict.bill_id})"
+                                         onmouseover="showConflictTooltip(event, ${conflict.bill_id}, '${conflict.invoice}', '${conflict.hotel}', '${conflict.bill_details.check_in}', '${conflict.bill_details.check_out}', '${conflict.bill_details.total_amount}', '${conflict.bill_details.submitted_by}', ${conflict.bill_details.room_count})" 
+                                         onmouseout="hideConflictTooltip()"
+                                         style="cursor: pointer; transition: all 0.3s ease;">
                                         <div class="conflict-details">
                                             <div class="conflict-hotel">${conflict.hotel}</div>
                                             <div class="conflict-dates">
@@ -1476,7 +1557,11 @@ try {
                                                 Bill ID: ${conflict.bill_id}
                                             </div>
                                         </div>
-                                        <div class="conflict-badge">DUPLICATE</div>
+                                        <div class="conflict-actions">
+                                            <div class="conflict-badge">DUPLICATE</div>
+                                            <button type="button" class="view-bill-btn" onclick="event.stopPropagation(); openBillInNewTab(${conflict.bill_id})" title="View Bill">👁️</button>
+                                            <button type="button" class="edit-bill-btn" onclick="event.stopPropagation(); editBillInNewTab(${conflict.bill_id})" title="Edit Bill">✏️</button>
+                                        </div>
                                     </div>
                                 `;
                             }).join('')}
@@ -1537,71 +1622,112 @@ try {
             container.innerHTML = html;
         }
 
-        // Show conflict details on hover (ENHANCED)
-        function showConflictDetails(billId, invoice, hotel, checkIn, checkOut, totalAmount, submittedBy) {
+        // Show conflict tooltip on hover (FIXED positioning)
+        function showConflictTooltip(event, billId, invoice, hotel, checkIn, checkOut, totalAmount, submittedBy, roomCount) {
             // Remove existing tooltip
-            hideConflictDetails();
+            hideConflictTooltip();
             
             // Create tooltip with bill details
             const tooltip = document.createElement('div');
             tooltip.id = 'conflict-tooltip';
             tooltip.style.cssText = `
-                position: fixed;
-                background: #2d3748;
+                position: absolute;
+                background: #1a202c;
                 color: white;
                 padding: 1rem;
                 border-radius: 8px;
-                box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+                box-shadow: 0 8px 20px rgba(0,0,0,0.3);
                 z-index: 1000;
-                max-width: 350px;
+                max-width: 320px;
                 font-size: 0.85rem;
                 pointer-events: none;
-                border: 2px solid #fed7aa;
+                border: 2px solid #f59e0b;
+                font-family: 'Segoe UI', sans-serif;
             `;
             
             const billDetails = `
-                <div style="font-weight: 600; margin-bottom: 0.5rem; color: #fed7aa;">⚠️ Conflicting Bill Details</div>
-                <div style="margin-bottom: 0.5rem;">
-                    <strong>Invoice:</strong> ${invoice}<br>
-                    <strong>Hotel:</strong> ${hotel}<br>
-                    <strong>Bill ID:</strong> ${billId}
+                <div style="font-weight: 600; margin-bottom: 0.75rem; color: #fbbf24; font-size: 0.9rem;">
+                    ⚠️ Conflicting Bill Details
                 </div>
-                <div style="margin-bottom: 0.5rem;">
-                    <strong>Stay Period:</strong><br>
-                    Check-in: ${new Date(checkIn).toLocaleDateString()}<br>
-                    Check-out: ${new Date(checkOut).toLocaleDateString()}
+                <div style="margin-bottom: 0.75rem;">
+                    <div style="margin-bottom: 0.5rem;">
+                        <strong style="color: #fbbf24;">Invoice:</strong> <span style="color: #e5e7eb;">${invoice}</span>
+                    </div>
+                    <div style="margin-bottom: 0.5rem;">
+                        <strong style="color: #fbbf24;">Hotel:</strong> <span style="color: #e5e7eb;">${hotel}</span>
+                    </div>
+                    <div>
+                        <strong style="color: #fbbf24;">Bill ID:</strong> <span style="color: #e5e7eb;">${billId}</span>
+                    </div>
                 </div>
-                <div style="margin-bottom: 0.5rem;">
-                    <strong>Bill Details:</strong><br>
-                    Total: LKR ${parseFloat(totalAmount).toLocaleString()}<br>
-                    Submitted by: ${submittedBy}
+                <div style="margin-bottom: 0.75rem;">
+                    <div style="font-weight: 600; color: #fbbf24; margin-bottom: 0.5rem;">Stay Period:</div>
+                    <div style="color: #e5e7eb; font-size: 0.8rem;">
+                        📅 ${new Date(checkIn).toLocaleDateString()}<br>
+                        📅 ${new Date(checkOut).toLocaleDateString()}
+                    </div>
                 </div>
-                <div style="margin-top: 0.75rem; padding-top: 0.5rem; border-top: 1px solid #4a5568; opacity: 0.8; font-size: 0.8rem;">
-                    This employee is already assigned to this bill on overlapping dates
+                <div style="margin-bottom: 0.75rem;">
+                    <div style="font-weight: 600; color: #fbbf24; margin-bottom: 0.5rem;">Bill Summary:</div>
+                    <div style="color: #e5e7eb; font-size: 0.8rem;">
+                        🏠 Rooms: ${roomCount || 'N/A'}<br>
+                        💰 Total: LKR ${parseFloat(totalAmount || 0).toLocaleString()}<br>
+                        👤 ${submittedBy || 'N/A'}
+                    </div>
+                </div>
+                <div style="border-top: 1px solid #374151; padding-top: 0.5rem; font-size: 0.75rem; color: #9ca3af; text-align: center;">
+                    Click to view details • ✏️ Edit bill
                 </div>
             `;
             
             tooltip.innerHTML = billDetails;
+            
+            // Get the conflict item element for relative positioning
+            const conflictItem = event.currentTarget;
+            const rect = conflictItem.getBoundingClientRect();
+            
+            // Position tooltip relative to the conflict item
+            tooltip.style.left = (rect.right + 10) + 'px';
+            tooltip.style.top = (rect.top + window.scrollY) + 'px';
+            
             document.body.appendChild(tooltip);
             
-            // Position tooltip near mouse
-            document.addEventListener('mousemove', updateTooltipPosition);
-        }
-
-        function updateTooltipPosition(e) {
-            const tooltip = document.getElementById('conflict-tooltip');
-            if (tooltip) {
-                tooltip.style.left = (e.pageX + 10) + 'px';
-                tooltip.style.top = (e.pageY - 50) + 'px';
+            // Check if tooltip goes off screen and adjust
+            const tooltipRect = tooltip.getBoundingClientRect();
+            
+            // If tooltip goes off right edge, position it to the left
+            if (tooltipRect.right > window.innerWidth - 20) {
+                tooltip.style.left = (rect.left - tooltipRect.width - 10) + 'px';
+            }
+            
+            // If tooltip goes off bottom edge, position it above
+            if (tooltipRect.bottom > window.innerHeight - 20) {
+                tooltip.style.top = (rect.top + window.scrollY - tooltipRect.height) + 'px';
+            }
+            
+            // If tooltip goes off top edge, position it below
+            if (tooltipRect.top < 20) {
+                tooltip.style.top = (rect.bottom + window.scrollY + 10) + 'px';
             }
         }
 
-        function hideConflictDetails() {
+        function hideConflictTooltip() {
             const tooltip = document.getElementById('conflict-tooltip');
             if (tooltip) {
                 tooltip.remove();
-                document.removeEventListener('mousemove', updateTooltipPosition);
             }
+        }
+
+        // Open bill in new tab for viewing
+        function openBillInNewTab(billId) {
+            const url = `../bills/details.php?id=${billId}`;
+            window.open(url, '_blank', 'noopener,noreferrer');
+        }
+
+        // Open bill in new tab for editing
+        function editBillInNewTab(billId) {
+            const url = `../bills/edit.php?id=${billId}`;
+            window.open(url, '_blank', 'noopener,noreferrer');
         }
 
         // Check employee availability for the bill dates (REAL-TIME)
