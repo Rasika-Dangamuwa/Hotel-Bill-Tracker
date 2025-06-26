@@ -1,256 +1,275 @@
 <?php
 /**
- * Database Connection Test
+ * Database Connection File
  * Hotel Bill Tracking System - Nestle Lanka Limited
  * 
- * Use this file to test your database connection
- * Access: http://yoursite/test_connection.php
+ * This file handles all database connections and provides
+ * utility functions for database operations
  */
 
-// Allow access to database file
-define('ALLOW_ACCESS', true);
+// Prevent direct access to this file
+if (!defined('ALLOW_ACCESS')) {
+    die('Direct access not permitted');
+}
 
-// Include database connection
-require_once 'includes/db.php';
+// Database configuration
+class DatabaseConfig {
+    // Database connection parameters
+    private const DB_HOST = 'localhost';        // Change if needed
+    private const DB_NAME = 'hotel_tracking_system';
+    private const DB_USER = 'root';             // Change to your MySQL username
+    private const DB_PASS = '';                 // Change to your MySQL password
+    private const DB_CHARSET = 'utf8mb4';
+    
+    // Connection settings
+    private const DB_OPTIONS = [
+        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES   => false,
+        PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4"
+    ];
+    
+    private static $connection = null;
+    
+    /**
+     * Get database connection instance (Singleton pattern)
+     * @return PDO Database connection
+     * @throws Exception If connection fails
+     */
+    public static function getConnection() {
+        if (self::$connection === null) {
+            try {
+                $dsn = "mysql:host=" . self::DB_HOST . ";dbname=" . self::DB_NAME . ";charset=" . self::DB_CHARSET;
+                self::$connection = new PDO($dsn, self::DB_USER, self::DB_PASS, self::DB_OPTIONS);
+                
+                // Set timezone to Sri Lanka
+                self::$connection->exec("SET time_zone = '+05:30'");
+                
+            } catch (PDOException $e) {
+                // Log error (in production, log to file instead of displaying)
+                error_log("Database connection failed: " . $e->getMessage());
+                throw new Exception("Database connection failed. Please try again later.");
+            }
+        }
+        
+        return self::$connection;
+    }
+    
+    /**
+     * Close database connection
+     */
+    public static function closeConnection() {
+        self::$connection = null;
+    }
+    
+    /**
+     * Test database connection
+     * @return bool True if connection successful
+     */
+    public static function testConnection() {
+        try {
+            $pdo = self::getConnection();
+            $stmt = $pdo->query("SELECT 1");
+            return $stmt !== false;
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+}
 
+/**
+ * Database utility class for common operations
+ */
+class Database {
+    private $pdo;
+    
+    public function __construct() {
+        $this->pdo = DatabaseConfig::getConnection();
+    }
+    
+    /**
+     * Execute a prepared statement
+     * @param string $sql SQL query with placeholders
+     * @param array $params Parameters for the query
+     * @return PDOStatement
+     * @throws Exception If query fails
+     */
+    public function query($sql, $params = []) {
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+            return $stmt;
+        } catch (PDOException $e) {
+            error_log("Database query failed: " . $e->getMessage() . " | SQL: " . $sql);
+            throw new Exception("Database operation failed. Please try again.");
+        }
+    }
+    
+    /**
+     * Get a single row from database
+     * @param string $sql SQL query
+     * @param array $params Query parameters
+     * @return array|false Single row or false if not found
+     */
+    public function fetchRow($sql, $params = []) {
+        $stmt = $this->query($sql, $params);
+        return $stmt->fetch();
+    }
+    
+    /**
+     * Get all rows from database
+     * @param string $sql SQL query
+     * @param array $params Query parameters
+     * @return array Array of rows
+     */
+    public function fetchAll($sql, $params = []) {
+        $stmt = $this->query($sql, $params);
+        return $stmt->fetchAll();
+    }
+    
+    /**
+     * Get single value from database
+     * @param string $sql SQL query
+     * @param array $params Query parameters
+     * @return mixed Single value
+     */
+    public function fetchValue($sql, $params = []) {
+        $stmt = $this->query($sql, $params);
+        return $stmt->fetchColumn();
+    }
+    
+    /**
+     * Insert data and return last insert ID
+     * @param string $sql SQL insert query
+     * @param array $params Query parameters
+     * @return string Last insert ID
+     */
+    public function insert($sql, $params = []) {
+        $this->query($sql, $params);
+        return $this->pdo->lastInsertId();
+    }
+    
+    /**
+     * Update/Delete data and return affected rows
+     * @param string $sql SQL query
+     * @param array $params Query parameters
+     * @return int Number of affected rows
+     */
+    public function execute($sql, $params = []) {
+        $stmt = $this->query($sql, $params);
+        return $stmt->rowCount();
+    }
+    
+    /**
+     * Begin database transaction
+     */
+    public function beginTransaction() {
+        $this->pdo->beginTransaction();
+    }
+    
+    /**
+     * Commit database transaction
+     */
+    public function commit() {
+        $this->pdo->commit();
+    }
+    
+    /**
+     * Rollback database transaction
+     */
+    public function rollback() {
+        $this->pdo->rollback();
+    }
+    
+    /**
+     * Check if we're in a transaction
+     * @return bool True if in transaction
+     */
+    public function inTransaction() {
+        return $this->pdo->inTransaction();
+    }
+}
+
+/**
+ * Quick database functions for simple operations
+ */
+
+/**
+ * Get database instance
+ * @return Database Database instance
+ */
+function getDB() {
+    return new Database();
+}
+
+/**
+ * Execute a simple query
+ * @param string $sql SQL query
+ * @param array $params Query parameters
+ * @return PDOStatement
+ */
+function dbQuery($sql, $params = []) {
+    $db = getDB();
+    return $db->query($sql, $params);
+}
+
+/**
+ * Get single row
+ * @param string $sql SQL query
+ * @param array $params Query parameters
+ * @return array|false
+ */
+function dbFetchRow($sql, $params = []) {
+    $db = getDB();
+    return $db->fetchRow($sql, $params);
+}
+
+/**
+ * Get all rows
+ * @param string $sql SQL query
+ * @param array $params Query parameters
+ * @return array
+ */
+function dbFetchAll($sql, $params = []) {
+    $db = getDB();
+    return $db->fetchAll($sql, $params);
+}
+
+/**
+ * Get single value
+ * @param string $sql SQL query
+ * @param array $params Query parameters
+ * @return mixed
+ */
+function dbFetchValue($sql, $params = []) {
+    $db = getDB();
+    return $db->fetchValue($sql, $params);
+}
+
+/**
+ * Insert data
+ * @param string $sql SQL query
+ * @param array $params Query parameters
+ * @return string Last insert ID
+ */
+function dbInsert($sql, $params = []) {
+    $db = getDB();
+    return $db->insert($sql, $params);
+}
+
+/**
+ * Execute update/delete
+ * @param string $sql SQL query
+ * @param array $params Query parameters
+ * @return int Affected rows
+ */
+function dbExecute($sql, $params = []) {
+    $db = getDB();
+    return $db->execute($sql, $params);
+}
+
+// Set flag to allow access to this file (only if not already defined)
+if (!defined('ALLOW_ACCESS')) {
+    define('ALLOW_ACCESS', true);
+}
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Database Connection Test</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 50px auto;
-            padding: 20px;
-            background: #f5f5f5;
-        }
-        .test-container {
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .success {
-            color: #27ae60;
-            background: #d5f4e6;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 10px 0;
-        }
-        .error {
-            color: #e74c3c;
-            background: #fdeaea;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 10px 0;
-        }
-        .info {
-            color: #3498db;
-            background: #ebf3fd;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 10px 0;
-        }
-        .test-result {
-            margin: 15px 0;
-            padding: 10px;
-            border-left: 4px solid #ddd;
-            background: #f9f9f9;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 15px 0;
-        }
-        th, td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-        th {
-            background: #f8f9fa;
-            font-weight: bold;
-        }
-        pre {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 5px;
-            overflow-x: auto;
-            font-size: 14px;
-        }
-    </style>
-</head>
-<body>
-    <div class="test-container">
-        <h1>🔌 Database Connection Test</h1>
-        <p><strong>Hotel Bill Tracking System - Nestle Lanka Limited</strong></p>
-        
-        <?php
-        echo "<div class='info'>";
-        echo "<strong>Test Date:</strong> " . date('Y-m-d H:i:s') . "<br>";
-        echo "<strong>PHP Version:</strong> " . PHP_VERSION . "<br>";
-        echo "<strong>Server:</strong> " . $_SERVER['SERVER_SOFTWARE'] ?? 'Unknown';
-        echo "</div>";
-
-        // Test 1: Basic Connection
-        echo "<h2>📋 Test Results</h2>";
-        
-        try {
-            echo "<div class='test-result'>";
-            echo "<h3>1. Database Connection Test</h3>";
-            
-            if (DatabaseConfig::testConnection()) {
-                echo "<div class='success'>✅ <strong>SUCCESS:</strong> Database connection established!</div>";
-            } else {
-                echo "<div class='error'>❌ <strong>FAILED:</strong> Cannot connect to database</div>";
-            }
-            
-        } catch (Exception $e) {
-            echo "<div class='error'>❌ <strong>CONNECTION ERROR:</strong> " . $e->getMessage() . "</div>";
-        }
-        echo "</div>";
-
-        // Test 2: Database Structure
-        try {
-            echo "<div class='test-result'>";
-            echo "<h3>2. Database Structure Test</h3>";
-            
-            $db = getDB();
-            
-            // Check if tables exist
-            $tables = ['users', 'hotels', 'hotel_rates', 'employees', 'bills', 'bill_employees', 'audit_log'];
-            $existingTables = [];
-            
-            foreach ($tables as $table) {
-                $result = $db->fetchValue("SHOW TABLES LIKE ?", [$table]);
-                if ($result) {
-                    $existingTables[] = $table;
-                }
-            }
-            
-            if (count($existingTables) === count($tables)) {
-                echo "<div class='success'>✅ <strong>SUCCESS:</strong> All required tables exist</div>";
-            } else {
-                echo "<div class='error'>❌ <strong>WARNING:</strong> Some tables are missing</div>";
-                $missingTables = array_diff($tables, $existingTables);
-                echo "<p><strong>Missing tables:</strong> " . implode(', ', $missingTables) . "</p>";
-            }
-            
-            echo "<p><strong>Existing tables:</strong> " . implode(', ', $existingTables) . "</p>";
-            echo "</div>";
-
-        } catch (Exception $e) {
-            echo "<div class='test-result'>";
-            echo "<div class='error'>❌ <strong>TABLE CHECK ERROR:</strong> " . $e->getMessage() . "</div>";
-            echo "</div>";
-        }
-
-        // Test 3: Sample Data Check
-        try {
-            echo "<div class='test-result'>";
-            echo "<h3>3. Sample Data Test</h3>";
-            
-            $db = getDB();
-            
-            // Check users table
-            $userCount = $db->fetchValue("SELECT COUNT(*) FROM users");
-            if ($userCount > 0) {
-                echo "<div class='success'>✅ <strong>Users found:</strong> $userCount users in database</div>";
-                
-                // Show sample users
-                $users = $db->fetchAll("SELECT id, name, email, role FROM users LIMIT 5");
-                if ($users) {
-                    echo "<table>";
-                    echo "<tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th></tr>";
-                    foreach ($users as $user) {
-                        echo "<tr>";
-                        echo "<td>" . $user['id'] . "</td>";
-                        echo "<td>" . htmlspecialchars($user['name']) . "</td>";
-                        echo "<td>" . htmlspecialchars($user['email']) . "</td>";
-                        echo "<td>" . htmlspecialchars($user['role']) . "</td>";
-                        echo "</tr>";
-                    }
-                    echo "</table>";
-                }
-            } else {
-                echo "<div class='error'>❌ <strong>No users found:</strong> Please run the database schema to create sample users</div>";
-            }
-            echo "</div>";
-
-        } catch (Exception $e) {
-            echo "<div class='test-result'>";
-            echo "<div class='error'>❌ <strong>DATA CHECK ERROR:</strong> " . $e->getMessage() . "</div>";
-            echo "</div>";
-        }
-
-        // Test 4: Login Test
-        try {
-            echo "<div class='test-result'>";
-            echo "<h3>4. Authentication Test</h3>";
-            
-            $db = getDB();
-            
-            // Check if default users exist with correct passwords
-            $adminUser = $db->fetchRow("SELECT * FROM users WHERE email = ?", ['admin@nestle.lk']);
-            $accountUser = $db->fetchRow("SELECT * FROM users WHERE email = ?", ['accounts@nestle.lk']);
-            
-            if ($adminUser && $accountUser) {
-                echo "<div class='success'>✅ <strong>Default users exist</strong></div>";
-                echo "<div class='info'>";
-                echo "<strong>Test Login Credentials:</strong><br>";
-                echo "Admin: admin@nestle.lk / password<br>";
-                echo "Account Assistant: accounts@nestle.lk / password";
-                echo "</div>";
-                
-                // Test password verification
-                if (password_verify('password', $adminUser['password'])) {
-                    echo "<div class='success'>✅ <strong>Password verification working</strong></div>";
-                } else {
-                    echo "<div class='error'>❌ <strong>Password verification failed</strong></div>";
-                }
-            } else {
-                echo "<div class='error'>❌ <strong>Default users not found</strong></div>";
-            }
-            echo "</div>";
-
-        } catch (Exception $e) {
-            echo "<div class='test-result'>";
-            echo "<div class='error'>❌ <strong>AUTH TEST ERROR:</strong> " . $e->getMessage() . "</div>";
-            echo "</div>";
-        }
-
-        // Configuration Info
-        echo "<div class='test-result'>";
-        echo "<h3>5. Configuration Information</h3>";
-        echo "<pre>";
-        echo "Database Host: localhost\n";
-        echo "Database Name: hotel_tracking_system\n";
-        echo "Character Set: utf8mb4\n";
-        echo "Timezone: +05:30 (Sri Lanka)\n";
-        echo "PDO Driver: " . (extension_loaded('pdo_mysql') ? 'Available' : 'NOT AVAILABLE') . "\n";
-        echo "Session Status: " . (session_status() === PHP_SESSION_ACTIVE ? 'Active' : 'Inactive') . "\n";
-        echo "</pre>";
-        echo "</div>";
-
-        // Instructions
-        echo "<div class='info'>";
-        echo "<h3>📝 Next Steps:</h3>";
-        echo "<ol>";
-        echo "<li>If connection failed: Check your database credentials in <code>includes/db.php</code></li>";
-        echo "<li>If tables are missing: Run the SQL schema file to create tables</li>";
-        echo "<li>If users are missing: Import the sample data from schema.sql</li>";
-        echo "<li>If everything is green: Your system is ready! Delete this test file for security.</li>";
-        echo "</ol>";
-        echo "</div>";
-        ?>
-        
-        <div style="margin-top: 30px; text-align: center;">
-            <a href="index.php" style="background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Go to Login Page</a>
-        </div>
-    </div>
-</body>
-</html>

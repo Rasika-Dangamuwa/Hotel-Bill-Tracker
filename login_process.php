@@ -58,15 +58,24 @@ try {
     // Get database connection
     $db = getDB();
     
-    // Find user by email
+    // Find user by email (simplified query for debugging)
     $user = $db->fetchRow(
-        "SELECT id, name, email, password, role, is_active FROM users WHERE email = ? AND is_active = 1",
+        "SELECT id, name, email, password, role, is_active FROM users WHERE email = ?",
         [$email]
     );
+    
+    // Debug: Log the query result
+    error_log("Login attempt for: " . $email);
+    error_log("User found: " . ($user ? 'Yes' : 'No'));
     
     // Check if user exists
     if (!$user) {
         sendResponse(false, 'Invalid email or password');
+    }
+    
+    // Check if user is active (only if is_active column exists)
+    if (isset($user['is_active']) && !$user['is_active']) {
+        sendResponse(false, 'Your account has been deactivated. Please contact administrator.');
     }
     
     // Verify password
@@ -75,7 +84,7 @@ try {
     }
     
     // Check if user is active
-    if (!$user['is_active']) {
+    if (isset($user['is_active']) && !$user['is_active']) {
         sendResponse(false, 'Your account has been deactivated. Please contact administrator.');
     }
     
@@ -87,18 +96,23 @@ try {
     $_SESSION['login_time'] = time();
     $_SESSION['last_activity'] = time();
     
-    // Log successful login
-    $db->query(
-        "INSERT INTO audit_log (table_name, record_id, action, new_values, user_id, ip_address) VALUES (?, ?, ?, ?, ?, ?)",
-        [
-            'users',
-            $user['id'],
-            'LOGIN',
-            json_encode(['login_time' => date('Y-m-d H:i:s')]),
-            $user['id'],
-            $_SERVER['REMOTE_ADDR'] ?? 'unknown'
-        ]
-    );
+    // Log successful login (only if audit_log table exists)
+    try {
+        $db->query(
+            "INSERT INTO audit_log (table_name, record_id, action, new_values, user_id, ip_address) VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                'users',
+                $user['id'],
+                'LOGIN',
+                json_encode(['login_time' => date('Y-m-d H:i:s')]),
+                $user['id'],
+                $_SERVER['REMOTE_ADDR'] ?? 'unknown'
+            ]
+        );
+    } catch (Exception $e) {
+        // If audit_log table doesn't exist, just log to PHP error log
+        error_log("Audit log failed (table might not exist): " . $e->getMessage());
+    }
     
     // Send success response
     sendResponse(true, 'Login successful', [
