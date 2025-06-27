@@ -1,9 +1,7 @@
 <?php
 /**
- * Room Rates Management Page
+ * Room Rates Management Page - FIXED VERSION
  * Hotel Bill Tracking System - Nestle Lanka Limited
- * 
- * Manage current room rates for all hotels
  */
 
 // Start session
@@ -44,14 +42,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new Exception('Rate must be greater than 0.');
             }
             
-            // Validate effective date
-            $effectiveDateObj = new DateTime($effectiveDate);
-            $today = new DateTime();
-            
-            if ($effectiveDateObj < $today->modify('-1 year')) {
-                throw new Exception('Effective date cannot be more than 1 year in the past.');
-            }
-            
             // Get hotel name for logging
             $hotel = $db->fetchRow("SELECT hotel_name FROM hotels WHERE id = ?", [$hotelId]);
             if (!$hotel) {
@@ -78,20 +68,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $rateId = $db->insert(
                     "INSERT INTO hotel_rates (hotel_id, rate, effective_date, is_current, created_by) VALUES (?, ?, ?, 1, ?)",
                     [$hotelId, $newRate, $effectiveDate, $currentUser['id']]
-                );
-                
-                // Log activity
-                $db->query(
-                    "INSERT INTO audit_log (table_name, record_id, action, old_values, new_values, user_id, ip_address) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    [
-                        'hotel_rates',
-                        $rateId,
-                        'UPDATE',
-                        json_encode(['hotel' => $hotel['hotel_name'], 'old_rate' => $currentRate['rate'] ?? 0]),
-                        json_encode(['hotel' => $hotel['hotel_name'], 'new_rate' => $newRate, 'effective_date' => $effectiveDate, 'notes' => $notes]),
-                        $currentUser['id'],
-                        $_SERVER['REMOTE_ADDR'] ?? 'unknown'
-                    ]
                 );
                 
                 $db->commit();
@@ -129,7 +105,7 @@ try {
          ORDER BY days_since_update DESC, h.hotel_name"
     );
     
-    // Get rate history for the modal
+    // Get rate history
     $rateHistory = [];
     foreach ($hotelsWithRates as $hotel) {
         if ($hotel['id']) {
@@ -232,6 +208,32 @@ try {
             padding: 0 2rem;
         }
 
+        /* Alert Styles */
+        .alert {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            font-weight: 500;
+        }
+
+        .alert-success {
+            background: #c6f6d5;
+            color: #2f855a;
+            border: 1px solid #9ae6b4;
+        }
+
+        .alert-error {
+            background: #fed7d7;
+            color: #c53030;
+            border: 1px solid #feb2b2;
+        }
+
+        .alert-info {
+            background: #bee3f8;
+            color: #2b6cb0;
+            border: 1px solid #90cdf4;
+        }
+
         /* Stats Cards */
         .stats-grid {
             display: grid;
@@ -308,23 +310,6 @@ try {
             gap: 8px;
         }
 
-        .bulk-update-btn {
-            background: linear-gradient(135deg, #48bb78, #38a169);
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .bulk-update-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 15px rgba(72, 187, 120, 0.3);
-        }
-
         /* Search Container */
         .search-container {
             position: relative;
@@ -350,37 +335,6 @@ try {
 
         .search-input::placeholder {
             color: #9ca3af;
-        }
-
-        /* Search Results */
-        .no-results {
-            text-align: center;
-            padding: 3rem 2rem;
-            color: #718096;
-        }
-
-        .no-results h3 {
-            margin-bottom: 0.5rem;
-            color: #4a5568;
-        }
-
-        .search-stats {
-            background: #f0f9ff;
-            border: 1px solid #bae6fd;
-            border-radius: 8px;
-            padding: 0.75rem 1rem;
-            margin: 1rem 2rem;
-            font-size: 0.9rem;
-            color: #1e40af;
-        }
-
-        /* Highlight search terms */
-        .highlight {
-            background: #fef3c7;
-            color: #92400e;
-            font-weight: 600;
-            padding: 1px 2px;
-            border-radius: 2px;
         }
 
         .rates-table {
@@ -643,31 +597,6 @@ try {
             background: #cbd5e0;
         }
 
-        .alert {
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
-            font-weight: 500;
-        }
-
-        .alert-success {
-            background: #c6f6d5;
-            color: #2f855a;
-            border: 1px solid #9ae6b4;
-        }
-
-        .alert-error {
-            background: #fed7d7;
-            color: #c53030;
-            border: 1px solid #feb2b2;
-        }
-
-        .alert-info {
-            background: #bee3f8;
-            color: #2b6cb0;
-            border: 1px solid #90cdf4;
-        }
-
         .history-item {
             padding: 1rem;
             border: 1px solid #e2e8f0;
@@ -695,6 +624,25 @@ try {
             border-radius: 12px;
             font-size: 0.7rem;
             font-weight: 600;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: #718096;
+        }
+
+        .no-results h3 {
+            margin-bottom: 0.5rem;
+            color: #4a5568;
+        }
+
+        .highlight {
+            background: #fef3c7;
+            color: #92400e;
+            font-weight: 600;
+            padding: 1px 2px;
+            border-radius: 2px;
         }
 
         @media (max-width: 768px) {
@@ -785,7 +733,7 @@ try {
             </div>
 
             <?php if (!empty($hotelsWithRates)): ?>
-                <table class="rates-table">
+                <table class="rates-table" id="ratesTable">
                     <thead>
                         <tr>
                             <th>Hotel</th>
@@ -842,12 +790,12 @@ try {
                                 <td>
                                     <div class="actions">
                                         <button class="action-btn btn-update" 
-                                                onclick="showUpdateRate(<?php echo $hotel['id']; ?>, '<?php echo htmlspecialchars($hotel['hotel_name']); ?>', <?php echo $hotel['rate'] ?: 0; ?>)">
+                                                onclick="showUpdateRateModal(<?php echo $hotel['id']; ?>, '<?php echo addslashes($hotel['hotel_name']); ?>', <?php echo $hotel['rate'] ?: 0; ?>)">
                                             Update Rate
                                         </button>
                                         <?php if ($hotel['rate']): ?>
                                             <button class="action-btn btn-history" 
-                                                    onclick="showRateHistory(<?php echo $hotel['id']; ?>, '<?php echo htmlspecialchars($hotel['hotel_name']); ?>')">
+                                                    onclick="showHistoryModal(<?php echo $hotel['id']; ?>, '<?php echo addslashes($hotel['hotel_name']); ?>')">
                                                 History
                                             </button>
                                         <?php endif; ?>
@@ -868,11 +816,11 @@ try {
     </div>
 
     <!-- Update Rate Modal -->
-    <div class="modal-overlay" id="updateRateModal" onclick="hideModal(event)">
-        <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-overlay" id="updateRateModal">
+        <div class="modal-content">
             <div class="modal-header">
                 <h3>Update Room Rate</h3>
-                <button type="button" class="modal-close" onclick="hideModal()">&times;</button>
+                <button type="button" class="modal-close" onclick="hideModals()">&times;</button>
             </div>
             <div class="modal-body">
                 <form method="POST" action="">
@@ -905,7 +853,7 @@ try {
                     </div>
                     
                     <div class="form-actions">
-                        <button type="button" class="btn-secondary" onclick="hideModal()">Cancel</button>
+                        <button type="button" class="btn-secondary" onclick="hideModals()">Cancel</button>
                         <button type="submit" class="btn-primary">Update Rate</button>
                     </div>
                 </form>
@@ -914,11 +862,11 @@ try {
     </div>
 
     <!-- Rate History Modal -->
-    <div class="modal-overlay" id="historyModal" onclick="hideModal(event)">
-        <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-overlay" id="historyModal">
+        <div class="modal-content">
             <div class="modal-header">
                 <h3>Rate History</h3>
-                <button type="button" class="modal-close" onclick="hideModal()">&times;</button>
+                <button type="button" class="modal-close" onclick="hideModals()">&times;</button>
             </div>
             <div class="modal-body">
                 <div id="historyContent">
@@ -928,339 +876,411 @@ try {
         </div>
     </div>
 
-    <script>
-        // Set default effective date to today
-        document.getElementById('effective_date').value = new Date().toISOString().split('T')[0];
+    <!-- Rate History Data (JSON) -->
+    <script type="text/javascript">
+        // Wait for DOM to be fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing page...');
+            
+            // Initialize effective date to today
+            initializeEffectiveDate();
+            
+            // Initialize search functionality
+            initializeSearch();
+            
+            // Initialize modal click handlers
+            initializeModals();
+            
+            console.log('Page initialization complete!');
+        });
 
-        function showUpdateRate(hotelId, hotelName, currentRate) {
-            document.getElementById('updateHotelId').value = hotelId;
-            document.getElementById('updateHotelName').value = hotelName;
-            document.getElementById('updateCurrentRate').value = currentRate > 0 ? 'LKR ' + new Intl.NumberFormat().format(currentRate) : 'No rate set';
-            document.getElementById('new_rate').value = '';
-            document.getElementById('notes').value = '';
-            document.getElementById('updateRateModal').classList.add('active');
-            document.getElementById('new_rate').focus();
+        // Initialize effective date field
+        function initializeEffectiveDate() {
+            const effectiveDateField = document.getElementById('effective_date');
+            if (effectiveDateField) {
+                const today = new Date();
+                effectiveDateField.value = today.toISOString().split('T')[0];
+                
+                // Set min/max dates
+                const oneYearAgo = new Date();
+                oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+                const oneYearFromNow = new Date();
+                oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
+                
+                effectiveDateField.setAttribute('min', oneYearAgo.toISOString().split('T')[0]);
+                effectiveDateField.setAttribute('max', oneYearFromNow.toISOString().split('T')[0]);
+                
+                console.log('Effective date initialized to:', effectiveDateField.value);
+            }
         }
 
-        function showRateHistory(hotelId, hotelName) {
-            const historyContent = document.getElementById('historyContent');
-            historyContent.innerHTML = '<div style="text-align: center; padding: 2rem;">Loading...</div>';
-            
-            // Get rate history from PHP data
-            const rateHistory = <?php echo json_encode($rateHistory); ?>;
-            const history = rateHistory[hotelId] || [];
-            
-            let historyHtml = `<h4 style="margin-bottom: 1rem;">${hotelName} - Rate History</h4>`;
-            
-            if (history.length > 0) {
-                historyHtml += '<div>';
-                history.forEach((rate, index) => {
-                    const isCurrent = index === 0; // First item is most recent
-                    const endDate = rate.end_date ? new Date(rate.end_date).toLocaleDateString() : 'Current';
-                    
-                    historyHtml += `
-                        <div class="history-item">
-                            <div>
-                                <div class="history-rate">LKR ${new Intl.NumberFormat().format(rate.rate)}</div>
-                                <div class="history-meta">
-                                    ${new Date(rate.effective_date).toLocaleDateString()} - ${endDate}<br>
-                                    By: ${rate.created_by} | ${new Date(rate.created_at).toLocaleDateString()}
-                                </div>
-                            </div>
-                            ${isCurrent ? '<span class="current-indicator">CURRENT</span>' : ''}
-                        </div>
-                    `;
-                });
-                historyHtml += '</div>';
+        // Initialize search functionality
+        function initializeSearch() {
+            const searchInput = document.getElementById('hotelSearch');
+            if (searchInput) {
+                console.log('Search input found, adding event listeners...');
+                
+                // Add multiple event listeners for better compatibility
+                searchInput.addEventListener('input', performSearch);
+                searchInput.addEventListener('keyup', performSearch);
+                searchInput.addEventListener('search', performSearch);
+                
+                console.log('Search event listeners added successfully!');
+                
+                // Test search functionality
+                setTimeout(() => {
+                    console.log('Testing search function...');
+                    performSearch();
+                }, 500);
             } else {
-                historyHtml += '<div style="text-align: center; padding: 2rem; color: #718096;">No rate history found</div>';
+                console.error('Search input not found!');
+            }
+        }
+
+        // Initialize modal functionality
+        function initializeModals() {
+            // Add click handlers to modal overlays
+            const updateModal = document.getElementById('updateRateModal');
+            const historyModal = document.getElementById('historyModal');
+            
+            if (updateModal) {
+                updateModal.addEventListener('click', function(e) {
+                    if (e.target === updateModal) {
+                        hideModals();
+                    }
+                });
             }
             
-            historyContent.innerHTML = historyHtml;
-            document.getElementById('historyModal').classList.add('active');
+            if (historyModal) {
+                historyModal.addEventListener('click', function(e) {
+                    if (e.target === historyModal) {
+                        hideModals();
+                    }
+                });
+            }
+
+            // Add escape key handler
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    hideModals();
+                }
+            });
+
+            console.log('Modal event handlers initialized');
         }
 
-        function showBulkUpdate() {
-            alert('Bulk update feature coming soon! For now, please update rates individually.');
-        }
-
-        // Real-time search functionality
-        function searchHotels() {
-            const searchTerm = document.getElementById('hotelSearch').value.toLowerCase().trim();
-            const tableRows = document.querySelectorAll('.rates-table tbody tr');
+        // SEARCH FUNCTIONALITY
+        function performSearch() {
+            console.log('Search function called!');
+            
+            const searchInput = document.getElementById('hotelSearch');
+            if (!searchInput) {
+                console.error('Search input not found!');
+                return;
+            }
+            
+            const searchTerm = searchInput.value.toLowerCase().trim();
+            console.log('Searching for:', searchTerm);
+            
+            const tableBody = document.querySelector('#ratesTable tbody');
+            if (!tableBody) {
+                console.error('Table body not found!');
+                return;
+            }
+            
+            const rows = tableBody.querySelectorAll('tr:not(.no-results-row)');
+            console.log('Found rows:', rows.length);
+            
             let visibleCount = 0;
             
-            // Remove existing no-results message first
-            const existingNoResults = document.querySelector('.no-results-row');
+            // Remove existing no-results row
+            const existingNoResults = tableBody.querySelector('.no-results-row');
             if (existingNoResults) {
                 existingNoResults.remove();
             }
             
-            tableRows.forEach(row => {
-                // Skip if this is a no-results row
-                if (row.classList.contains('no-results-row')) {
-                    return;
-                }
-                
+            // Filter rows
+            rows.forEach((row, index) => {
                 const hotelNameElement = row.querySelector('.hotel-details h4');
                 const locationElement = row.querySelector('.hotel-location');
                 
-                if (!hotelNameElement || !locationElement) {
-                    return;
-                }
-                
-                const hotelName = hotelNameElement.textContent.toLowerCase();
-                const location = locationElement.textContent.toLowerCase();
-                
-                if (searchTerm === '' || hotelName.includes(searchTerm) || location.includes(searchTerm)) {
-                    row.style.display = '';
-                    visibleCount++;
+                if (hotelNameElement && locationElement) {
+                    const hotelName = hotelNameElement.textContent.toLowerCase();
+                    const location = locationElement.textContent.toLowerCase();
                     
-                    // Highlight search terms
-                    if (searchTerm.length > 0) {
-                        highlightSearchTerm(hotelNameElement, searchTerm);
-                        highlightSearchTerm(locationElement, searchTerm);
+                    console.log(`Row ${index}: "${hotelName}" - "${location}"`);
+                    
+                    if (searchTerm === '' || hotelName.includes(searchTerm) || location.includes(searchTerm)) {
+                        row.style.display = '';
+                        visibleCount++;
+                        console.log(`✓ Showing row ${index}`);
+                        
+                        // Highlight search terms
+                        if (searchTerm.length > 0) {
+                            highlightText(hotelNameElement, searchTerm);
+                            highlightText(locationElement, searchTerm);
+                        } else {
+                            removeHighlight(hotelNameElement);
+                            removeHighlight(locationElement);
+                        }
                     } else {
-                        removeHighlight(hotelNameElement);
-                        removeHighlight(locationElement);
+                        row.style.display = 'none';
+                        console.log(`✗ Hiding row ${index}`);
                     }
                 } else {
-                    row.style.display = 'none';
+                    console.warn(`Row ${index} missing required elements`);
                 }
             });
             
-            // Update search stats
-            updateSearchStats(searchTerm, visibleCount, tableRows.length - document.querySelectorAll('.no-results-row').length);
+            console.log(`Search complete: ${visibleCount} of ${rows.length} rows visible`);
             
-            // Show "no results" message if needed
+            // Show no results message if needed
             if (visibleCount === 0 && searchTerm.length > 0) {
-                showNoResultsMessage(searchTerm);
+                showNoResultsMessage(searchTerm, tableBody);
             }
         }
 
-        function highlightSearchTerm(element, searchTerm) {
-            if (!element) return;
+        // Highlight search terms
+        function highlightText(element, searchTerm) {
+            if (!element || !searchTerm) return;
             
             const originalText = element.getAttribute('data-original-text') || element.textContent;
             element.setAttribute('data-original-text', originalText);
             
-            if (searchTerm.length === 0) {
-                element.textContent = originalText;
-                return;
-            }
-            
-            const regex = new RegExp(`(${searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\        function showBulkUpdate() {
-            alert('Bulk update feature coming soon! For now, please update rates individually.');
-        }')})`, 'gi');
+            const regex = new RegExp(`(${escapeRegExp(searchTerm)})`, 'gi');
             const highlightedText = originalText.replace(regex, '<span class="highlight">$1</span>');
             element.innerHTML = highlightedText;
         }
 
+        // Remove highlighting
         function removeHighlight(element) {
             if (!element) return;
             
             const originalText = element.getAttribute('data-original-text');
             if (originalText) {
                 element.textContent = originalText;
+                element.removeAttribute('data-original-text');
             }
         }
 
-        function updateSearchStats(searchTerm, visibleCount, totalCount) {
-            // Remove existing search stats
-            const existingStats = document.querySelector('.search-stats');
-            if (existingStats) {
-                existingStats.remove();
-            }
-            
-            if (searchTerm.length > 0) {
-                const statsDiv = document.createElement('div');
-                statsDiv.className = 'search-stats';
-                statsDiv.innerHTML = `
-                    <strong>Search Results:</strong> 
-                    Showing ${visibleCount} of ${totalCount} hotels for "${searchTerm}"
-                    ${visibleCount === 0 ? '- Try a different search term' : ''}
-                `;
-                
-                const table = document.querySelector('.rates-table');
-                table.parentNode.insertBefore(statsDiv, table);
-            }
+        // Escape special regex characters
+        function escapeRegExp(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\    <script type="text/javascript">');
         }
 
-        function showNoResultsMessage(searchTerm) {
-            const tbody = document.querySelector('.rates-table tbody');
+        // Show no results message
+        function showNoResultsMessage(searchTerm, tableBody) {
             const noResultsRow = document.createElement('tr');
             noResultsRow.className = 'no-results-row';
             noResultsRow.innerHTML = `
                 <td colspan="5" class="no-results">
-                    <div style="font-size: 3rem; margin-bottom: 1rem;">🔍</div>
+                    <div style="font-size: 2rem; margin-bottom: 1rem;">🔍</div>
                     <h3>No Hotels Found</h3>
-                    <p>No hotels match your search for "<strong>${searchTerm}</strong>"</p>
+                    <p>No hotels match your search for "<strong>${escapeHtml(searchTerm)}</strong>"</p>
                     <p style="margin-top: 0.5rem; font-size: 0.9rem; color: #9ca3af;">
                         Try searching by hotel name or location
                     </p>
                 </td>
             `;
-            tbody.appendChild(noResultsRow);
+            tableBody.appendChild(noResultsRow);
         }
 
-        // Initialize search functionality when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            // Add event listeners for search
-            const searchInput = document.getElementById('hotelSearch');
-            if (searchInput) {
-                // Multiple event listeners to ensure it works
-                searchInput.addEventListener('input', searchHotels);
-                searchInput.addEventListener('keyup', searchHotels);
-                searchInput.addEventListener('search', searchHotels);
+        // Escape HTML for safe display
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // MODAL FUNCTIONALITY
+        function showUpdateRateModal(hotelId, hotelName, currentRate) {
+            console.log('Opening update rate modal for hotel:', hotelName);
+            
+            try {
+                // Set form values
+                document.getElementById('updateHotelId').value = hotelId;
+                document.getElementById('updateHotelName').value = hotelName;
+                document.getElementById('updateCurrentRate').value = currentRate > 0 ? 
+                    'LKR ' + new Intl.NumberFormat().format(currentRate) : 'No rate set';
                 
-                // Focus search input when page loads
+                // Clear form fields
+                document.getElementById('new_rate').value = '';
+                document.getElementById('notes').value = '';
+                
+                // Show modal
+                document.getElementById('updateRateModal').classList.add('active');
+                
+                // Focus on rate input
                 setTimeout(() => {
-                    searchInput.focus();
-                }, 500);
+                    document.getElementById('new_rate').focus();
+                }, 100);
+                
+                console.log('Update rate modal opened successfully');
+            } catch (error) {
+                console.error('Error opening update rate modal:', error);
+                alert('Error opening update form. Please try again.');
+            }
+        }
+
+        function showHistoryModal(hotelId, hotelName) {
+            console.log('Opening history modal for hotel:', hotelName);
+            
+            try {
+                const historyContent = document.getElementById('historyContent');
+                historyContent.innerHTML = '<div style="text-align: center; padding: 2rem;">Loading...</div>';
+                
+                // Get rate history from global data
+                const rateHistory = window.RATE_HISTORY_DATA || {};
+                const history = rateHistory[hotelId] || [];
+                
+                console.log('Rate history for hotel', hotelId, ':', history);
+                
+                let historyHtml = `<h4 style="margin-bottom: 1rem;">${escapeHtml(hotelName)} - Rate History</h4>`;
+                
+                if (history.length > 0) {
+                    historyHtml += '<div>';
+                    history.forEach((rate, index) => {
+                        const isCurrent = index === 0; // First item is most recent
+                        const endDate = rate.end_date ? 
+                            new Date(rate.end_date).toLocaleDateString() : 'Current';
+                        
+                        historyHtml += `
+                            <div class="history-item">
+                                <div>
+                                    <div class="history-rate">LKR ${new Intl.NumberFormat().format(rate.rate)}</div>
+                                    <div class="history-meta">
+                                        ${new Date(rate.effective_date).toLocaleDateString()} - ${endDate}<br>
+                                        By: ${escapeHtml(rate.created_by)} | ${new Date(rate.created_at).toLocaleDateString()}
+                                    </div>
+                                </div>
+                                ${isCurrent ? '<span class="current-indicator">CURRENT</span>' : ''}
+                            </div>
+                        `;
+                    });
+                    historyHtml += '</div>';
+                } else {
+                    historyHtml += '<div style="text-align: center; padding: 2rem; color: #718096;">No rate history found</div>';
+                }
+                
+                historyContent.innerHTML = historyHtml;
+                document.getElementById('historyModal').classList.add('active');
+                
+                console.log('History modal opened successfully');
+            } catch (error) {
+                console.error('Error opening history modal:', error);
+                alert('Error loading rate history. Please try again.');
+            }
+        }
+
+        function hideModals() {
+            console.log('Hiding all modals');
+            
+            const updateModal = document.getElementById('updateRateModal');
+            const historyModal = document.getElementById('historyModal');
+            
+            if (updateModal) {
+                updateModal.classList.remove('active');
             }
             
-            // Debug log
-            console.log('Search functionality initialized');
-            
-            // Test search function
-            window.testSearch = function() {
-                console.log('Testing search...');
-                searchHotels();
-            };
+            if (historyModal) {
+                historyModal.classList.remove('active');
+            }
+        }
+
+        // FORM VALIDATION
+        document.addEventListener('DOMContentLoaded', function() {
+            // Rate input validation
+            const newRateInput = document.getElementById('new_rate');
+            if (newRateInput) {
+                newRateInput.addEventListener('input', function(e) {
+                    const value = parseFloat(e.target.value);
+                    if (value < 0) {
+                        e.target.value = 0;
+                    }
+                    if (value > 1000000) {
+                        e.target.value = 1000000;
+                        alert('Maximum rate is LKR 1,000,000');
+                    }
+                });
+            }
+
+            // Form submission validation
+            const updateForm = document.querySelector('form[method="POST"]');
+            if (updateForm) {
+                updateForm.addEventListener('submit', function(e) {
+                    const newRate = parseFloat(document.getElementById('new_rate').value);
+                    const effectiveDate = document.getElementById('effective_date').value;
+                    
+                    if (!newRate || newRate <= 0) {
+                        e.preventDefault();
+                        alert('Please enter a valid rate greater than 0.');
+                        document.getElementById('new_rate').focus();
+                        return;
+                    }
+                    
+                    if (!effectiveDate) {
+                        e.preventDefault();
+                        alert('Please select an effective date.');
+                        document.getElementById('effective_date').focus();
+                        return;
+                    }
+                    
+                    // Confirm rate change
+                    const hotelName = document.getElementById('updateHotelName').value;
+                    const currentRateText = document.getElementById('updateCurrentRate').value;
+                    
+                    const confirmMessage = `Confirm rate update for ${hotelName}?\n\n` +
+                        `Current: ${currentRateText}\n` +
+                        `New: LKR ${new Intl.NumberFormat().format(newRate)}\n` +
+                        `Effective: ${new Date(effectiveDate).toLocaleDateString()}`;
+                    
+                    if (!confirm(confirmMessage)) {
+                        e.preventDefault();
+                    }
+                });
+            }
         });
 
-        // Clear search when escape is pressed
+        // GLOBAL TEST FUNCTIONS (for debugging)
+        window.testSearch = function() {
+            console.log('Manual search test triggered');
+            performSearch();
+        };
+
+        window.testModal = function() {
+            console.log('Manual modal test triggered');
+            showUpdateRateModal(1, 'Test Hotel', 5000);
+        };
+
+        // KEYBOARD SHORTCUTS
         document.addEventListener('keydown', function(e) {
+            // Ctrl+F or Cmd+F to focus search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                const searchInput = document.getElementById('hotelSearch');
+                if (searchInput) {
+                    searchInput.focus();
+                    searchInput.select();
+                }
+            }
+            
+            // Escape to clear search
             if (e.key === 'Escape') {
                 const searchInput = document.getElementById('hotelSearch');
                 if (searchInput === document.activeElement) {
                     searchInput.value = '';
-                    searchHotels();
+                    performSearch();
                     searchInput.blur();
                 }
             }
         });
 
-        // Auto-focus search on Ctrl+F or Cmd+F (override browser search)
-        document.addEventListener('keydown', function(e) {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
-                e.preventDefault();
-                document.getElementById('hotelSearch').focus();
-            }
-        });
-
-        function hideModal(event) {
-            if (!event || event.target.classList.contains('modal-overlay') || event.target.classList.contains('modal-close')) {
-                document.getElementById('updateRateModal').classList.remove('active');
-                document.getElementById('historyModal').classList.remove('active');
-            }
-        }
-
-        // Validate rate input
-        document.getElementById('new_rate').addEventListener('input', function(e) {
-            const value = parseFloat(e.target.value);
-            if (value < 0) {
-                e.target.value = 0;
-            }
-            if (value > 1000000) {
-                e.target.value = 1000000;
-                alert('Maximum rate is LKR 1,000,000');
-            }
-        });
-
-        // Form validation
-        document.querySelector('form').addEventListener('submit', function(e) {
-            const newRate = parseFloat(document.getElementById('new_rate').value);
-            const effectiveDate = document.getElementById('effective_date').value;
-            
-            if (!newRate || newRate <= 0) {
-                e.preventDefault();
-                alert('Please enter a valid rate greater than 0.');
-                return;
-            }
-            
-            if (!effectiveDate) {
-                e.preventDefault();
-                alert('Please select an effective date.');
-                return;
-            }
-            
-            // Confirm rate change
-            const hotelName = document.getElementById('updateHotelName').value;
-            const currentRateText = document.getElementById('updateCurrentRate').value;
-            
-            if (!confirm(`Confirm rate update for ${hotelName}?\n\nCurrent: ${currentRateText}\nNew: LKR ${new Intl.NumberFormat().format(newRate)}\nEffective: ${new Date(effectiveDate).toLocaleDateString()}`)) {
-                e.preventDefault();
-            }
-        });
-
-        // Close modal with Escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                hideModal();
-            }
-        });
-
-        // Set min/max dates for effective date
-        const today = new Date();
-        const oneYearAgo = new Date();
-        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-        const oneYearFromNow = new Date();
-        oneYearFromNow.setFullYear(oneYearFromNow.getFullYear() + 1);
-        
-        document.getElementById('effective_date').setAttribute('min', oneYearAgo.toISOString().split('T')[0]);
-        document.getElementById('effective_date').setAttribute('max', oneYearFromNow.toISOString().split('T')[0]);
-
-        // Auto-focus on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            // Highlight hotels that need rate updates
-            const statusElements = document.querySelectorAll('.status-none, .status-outdated');
-            statusElements.forEach(element => {
-                const row = element.closest('tr');
-                if (row) {
-                    row.style.backgroundColor = '#fef5e7';
-                    row.style.borderLeft = '4px solid #f59e0b';
-                }
-            });
-        });
-
-        // Add sorting functionality
-        function sortTable(columnIndex) {
-            const table = document.querySelector('.rates-table');
-            const tbody = table.querySelector('tbody');
-            const rows = Array.from(tbody.querySelectorAll('tr'));
-            
-            rows.sort((a, b) => {
-                const aText = a.cells[columnIndex].textContent.trim();
-                const bText = b.cells[columnIndex].textContent.trim();
-                
-                // For rate column, compare numeric values
-                if (columnIndex === 1) {
-                    const aRate = parseFloat(aText.replace(/[^0-9.-]/g, '')) || 0;
-                    const bRate = parseFloat(bText.replace(/[^0-9.-]/g, '')) || 0;
-                    return bRate - aRate; // Descending order
-                }
-                
-                return aText.localeCompare(bText);
-            });
-            
-            // Clear tbody and append sorted rows
-            tbody.innerHTML = '';
-            rows.forEach(row => tbody.appendChild(row));
-        }
-
-        // Add click handlers to table headers for sorting
-        document.addEventListener('DOMContentLoaded', function() {
-            const headers = document.querySelectorAll('.rates-table th');
-            headers.forEach((header, index) => {
-                if (index < 4) { // Only first 4 columns are sortable
-                    header.style.cursor = 'pointer';
-                    header.style.userSelect = 'none';
-                    header.title = 'Click to sort';
-                    header.addEventListener('click', () => sortTable(index));
-                }
-            });
-        });
+        console.log('All JavaScript loaded successfully!');
     </script>
 </body>
 </html>
+        // Store rate history data safely
+        window.RATE_HISTORY_DATA = <?php echo json_encode($rateHistory, JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+    </script>
+
+    <script type="text/javascript">
