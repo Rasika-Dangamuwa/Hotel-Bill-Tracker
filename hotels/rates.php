@@ -876,8 +876,10 @@ try {
         </div>
     </div>
 
-    <!-- Rate History Data (JSON) -->
     <script type="text/javascript">
+        // Store rate history data safely
+        window.RATE_HISTORY_DATA = <?php echo json_encode($rateHistory, JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+        
         // Wait for DOM to be fully loaded
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM loaded, initializing page...');
@@ -1065,7 +1067,7 @@ try {
 
         // Escape special regex characters
         function escapeRegExp(string) {
-            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\    <script type="text/javascript">');
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\                // Set min/max dates');
         }
 
         // Show no results message
@@ -1140,14 +1142,14 @@ try {
                 if (history.length > 0) {
                     historyHtml += '<div>';
                     history.forEach((rate, index) => {
-                        const isCurrent = index === 0; // First item is most recent
+                        const isCurrent = rate.end_date === null || rate.end_date === '';
                         const endDate = rate.end_date ? 
                             new Date(rate.end_date).toLocaleDateString() : 'Current';
                         
                         historyHtml += `
                             <div class="history-item">
                                 <div>
-                                    <div class="history-rate">LKR ${new Intl.NumberFormat().format(rate.rate)}</div>
+                                    <div class="history-rate">LKR ${new Intl.NumberFormat().format(parseFloat(rate.rate))}</div>
                                     <div class="history-meta">
                                         ${new Date(rate.effective_date).toLocaleDateString()} - ${endDate}<br>
                                         By: ${escapeHtml(rate.created_by)} | ${new Date(rate.created_at).toLocaleDateString()}
@@ -1279,8 +1281,3 @@ try {
     </script>
 </body>
 </html>
-        // Store rate history data safely
-        window.RATE_HISTORY_DATA = <?php echo json_encode($rateHistory, JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
-    </script>
-
-    <script type="text/javascript">
