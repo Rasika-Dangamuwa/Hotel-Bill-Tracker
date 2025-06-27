@@ -1,9 +1,10 @@
 <?php
 /**
- * Employee Conflicts Check API
+ * Employee Conflicts Check API - Updated for Edit Mode
  * Hotel Bill Tracking System - Nestle Lanka Limited
  * 
  * Real-time API to check for employee assignment conflicts
+ * Now supports excluding current bill from conflict detection
  */
 
 // Start session and set headers
@@ -56,6 +57,7 @@ try {
     $employeeId = intval($input['employee_id']);
     $checkIn = $input['check_in'];
     $checkOut = $input['check_out'];
+    $excludeBillId = isset($input['exclude_bill_id']) ? intval($input['exclude_bill_id']) : null;
     
     // Validate dates
     $checkInDate = new DateTime($checkIn);
@@ -81,9 +83,8 @@ try {
     while ($currentDate < $checkOutDate) {
         $stayDate = $currentDate->format('Y-m-d');
         
-        // Check for existing assignments on this date
-        $conflictBill = $db->fetchRow(
-            "SELECT 
+        // Prepare conflict check SQL with optional bill exclusion
+        $conflictSql = "SELECT 
                 b.id as bill_id,
                 b.invoice_number,
                 b.check_in,
@@ -97,9 +98,17 @@ try {
              JOIN bills b ON be.bill_id = b.id 
              JOIN hotels h ON b.hotel_id = h.id 
              JOIN users u ON b.submitted_by = u.id
-             WHERE be.employee_id = ? AND be.stay_date = ?",
-            [$employeeId, $stayDate]
-        );
+             WHERE be.employee_id = ? AND be.stay_date = ?";
+        
+        $conflictParams = [$employeeId, $stayDate];
+        
+        // Add exclusion for current bill if editing
+        if ($excludeBillId) {
+            $conflictSql .= " AND b.id != ?";
+            $conflictParams[] = $excludeBillId;
+        }
+        
+        $conflictBill = $db->fetchRow($conflictSql, $conflictParams);
         
         if ($conflictBill) {
             $conflicts[] = [
@@ -127,6 +136,7 @@ try {
         'employee_name' => $employee['name'],
         'check_in' => $checkIn,
         'check_out' => $checkOut,
+        'exclude_bill_id' => $excludeBillId,
         'conflicts' => $conflicts,
         'conflict_count' => count($conflicts),
         'has_conflicts' => !empty($conflicts)
