@@ -192,7 +192,7 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Add New Bill - Hotel Tracking System</title>
-    <link rel="stylesheet" href="main.css">
+    <link rel="stylesheet" href="../assets/css/main.css">
     <style>
         /* Enhanced form styles for new dropdowns */
         .form-grid-enhanced {
