@@ -415,9 +415,8 @@ try {
                         <option value="">Select designation</option>
                         <option value="Propagandist" <?php echo ($_POST['designation'] ?? '') === 'Propagandist' ? 'selected' : ''; ?>>Propagandist</option>
                         <option value="Crew Member" <?php echo ($_POST['designation'] ?? '') === 'Crew Member' ? 'selected' : ''; ?>>Crew Member</option>
-                        <option value="Team Leader" <?php echo ($_POST['designation'] ?? '') === 'Team Leader' ? 'selected' : ''; ?>>Team Leader</option>
-                        <option value="Supervisor" <?php echo ($_POST['designation'] ?? '') === 'Supervisor' ? 'selected' : ''; ?>>Supervisor</option>
-                        <option value="Coordinator" <?php echo ($_POST['designation'] ?? '') === 'Coordinator' ? 'selected' : ''; ?>>Coordinator</option>
+                        <option value="Driver" <?php echo ($_POST['designation'] ?? '') === 'Driver' ? 'selected' : ''; ?>>Driver</option>
+                        <option value="Assistant" <?php echo ($_POST['designation'] ?? '') === 'Assistant' ? 'selected' : ''; ?>>Assistant</option>
                         <option value="Other" <?php echo ($_POST['designation'] ?? '') === 'Other' ? 'selected' : ''; ?>>Other</option>
                     </select>
                 </div>
@@ -426,12 +425,7 @@ try {
                     <label for="department">Department/Division</label>
                     <select id="department" name="department">
                         <option value="">Select department</option>
-                        <option value="Marketing" <?php echo ($_POST['department'] ?? '') === 'Marketing' ? 'selected' : ''; ?>>Marketing</option>
-                        <option value="Sales" <?php echo ($_POST['department'] ?? '') === 'Sales' ? 'selected' : ''; ?>>Sales</option>
-                        <option value="Promotions" <?php echo ($_POST['department'] ?? '') === 'Promotions' ? 'selected' : ''; ?>>Promotions</option>
-                        <option value="Events" <?php echo ($_POST['department'] ?? '') === 'Events' ? 'selected' : ''; ?>>Events</option>
-                        <option value="Field Operations" <?php echo ($_POST['department'] ?? '') === 'Field Operations' ? 'selected' : ''; ?>>Field Operations</option>
-                        <option value="Other" <?php echo ($_POST['department'] ?? '') === 'Other' ? 'selected' : ''; ?>>Other</option>
+                        <option value="Field Promotions" <?php echo ($_POST['department'] ?? '') === 'Field Promotions' ? 'selected' : ''; ?>>Field Promotions</option>
                     </select>
                 </div>
 

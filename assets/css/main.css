@@ -1,0 +1,592 @@
+/* Enhanced Bill Form Styles - Add these to your main.css */
+
+/* Form Grid Enhanced */
+.form-grid-enhanced {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.form-group-full {
+    grid-column: 1 / -1;
+}
+
+/* Dropdown Styles */
+.dropdown-container {
+    position: relative;
+}
+
+.dropdown-info {
+    font-size: 0.85rem;
+    color: #718096;
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.propagandist-badge {
+    display: inline-block;
+    background: #e6fffa;
+    color: #234e52;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    margin-left: 0.5rem;
+}
+
+/* File Info Styles */
+.file-info {
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.file-meta {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    font-size: 0.85rem;
+    color: #718096;
+}
+
+/* Required Note */
+.required-note {
+    background: #fef5e7;
+    border: 1px solid #f6e05e;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.required-note h4 {
+    margin-bottom: 0.5rem;
+    color: #744210;
+}
+
+.required-note p {
+    margin: 0;
+    color: #744210;
+    line-height: 1.5;
+}
+
+/* Hotel Search Dropdown */
+.hotel-search-container {
+    position: relative;
+}
+
+.hotel-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 100;
+    display: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.hotel-dropdown.active {
+    display: block;
+}
+
+.hotel-option {
+    padding: 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.hotel-option:hover {
+    background: #f8fafc;
+}
+
+.hotel-option.selected {
+    background: #ebf4ff;
+    border-left: 4px solid #667eea;
+}
+
+.hotel-info .hotel-name {
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 2px;
+}
+
+.hotel-info .hotel-location {
+    font-size: 0.85rem;
+    color: #718096;
+}
+
+.hotel-rate {
+    font-weight: 600;
+    color: #667eea;
+    font-size: 0.9rem;
+}
+
+/* Rate Display */
+.rate-display {
+    background: #ebf4ff;
+    border: 1px solid #bee3f8;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 0.5rem;
+}
+
+.rate-display h4 {
+    color: #2b6cb0;
+    margin-bottom: 0.5rem;
+}
+
+.rate-amount {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #2b6cb0;
+}
+
+/* Employee Status Badges */
+.available-badge {
+    background: #c6f6d5;
+    color: #22543d;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.assigned-badge {
+    background: #bee3f8;
+    color: #2a69ac;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.conflict-badge {
+    background: #fed7d7;
+    color: #c53030;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: help;
+}
+
+.checking-badge {
+    background: #faf089;
+    color: #744210;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Conflict Tooltip */
+.conflict-tooltip {
+    position: fixed;
+    background: white;
+    border: 2px solid #e53e3e;
+    border-radius: 8px;
+    padding: 1rem;
+    max-width: 300px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    z-index: 10000;
+}
+
+.tooltip-header {
+    font-weight: 600;
+    color: #c53030;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #fed7d7;
+}
+
+.conflict-item {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f7fafc;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.conflict-item:last-child {
+    border-bottom: none;
+}
+
+.conflict-item strong {
+    color: #2d3748;
+}
+
+.conflict-item small {
+    color: #718096;
+}
+
+/* Selected Employee Styles */
+.selected-employee {
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.selected-employee.has-conflicts {
+    border-color: #fed7d7;
+    background: #fffaf0;
+}
+
+.employee-main {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.employee-info .employee-name {
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 0.25rem;
+}
+
+.employee-info .employee-meta {
+    font-size: 0.85rem;
+    color: #718096;
+    margin-bottom: 0.25rem;
+}
+
+.conflict-warning {
+    font-size: 0.8rem;
+    color: #c53030;
+    font-weight: 500;
+}
+
+.remove-employee {
+    background: #fed7d7;
+    color: #c53030;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+}
+
+.remove-employee:hover {
+    background: #feb2b2;
+}
+
+/* Room Assignment Styles */
+.room-assignment {
+    border-top: 1px solid #e2e8f0;
+    padding-top: 1rem;
+}
+
+.room-assignment label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #4a5568;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.room-inputs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 0.75rem;
+}
+
+.room-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.room-input-group label {
+    font-size: 0.8rem;
+    color: #718096;
+    margin-bottom: 0;
+}
+
+.room-input-group input {
+    padding: 0.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.room-input-group input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Employee Assignment Container */
+.employee-assignment-container {
+    border: 2px dashed #e2e8f0;
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.add-employee-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1.5rem;
+    background: #f7fafc;
+    border: 2px dashed #cbd5e0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #4a5568;
+    font-weight: 500;
+}
+
+.add-employee-button:hover {
+    background: #edf2f7;
+    border-color: #a0aec0;
+    color: #2d3748;
+}
+
+.add-icon {
+    width: 2rem;
+    height: 2rem;
+    background: #667eea;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    font-weight: bold;
+}
+
+.selected-employees-container {
+    margin-top: 1.5rem;
+}
+
+.selected-employees-container h4 {
+    color: #2d3748;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Employee Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow: hidden;
+    box-shadow: 0 20px 25px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #2d3748;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #718096;
+    padding: 0.25rem;
+    line-height: 1;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.modal-close:hover {
+    background: #f7fafc;
+    color: #4a5568;
+}
+
+.modal-body {
+    padding: 1.5rem;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.employee-search {
+    margin-bottom: 1rem;
+}
+
+.employee-search input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.employee-search input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.employee-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.employee-option {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.employee-option:hover {
+    background: #f7fafc;
+    border-color: #cbd5e0;
+}
+
+.employee-option .employee-info {
+    flex: 1;
+}
+
+.employee-option .employee-name {
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 0.25rem;
+}
+
+.employee-option .employee-meta {
+    font-size: 0.85rem;
+    color: #718096;
+}
+
+.employee-status {
+    margin-left: 1rem;
+}
+
+/* Bill Summary Styles */
+.bill-summary {
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.summary-row:last-child {
+    border-bottom: none;
+}
+
+.summary-row.total {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #2d3748;
+    border-top: 2px solid #e2e8f0;
+    margin-top: 0.5rem;
+    padding-top: 1rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .form-grid-enhanced {
+        grid-template-columns: 1fr;
+    }
+    
+    .file-meta {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .room-inputs {
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 0.5rem;
+    }
+    
+    .employee-main {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+    
+    .modal-content {
+        width: 95%;
+        margin: 1rem;
+    }
+    
+    .modal-body {
+        max-height: 50vh;
+    }
+}
+
+@media (max-width: 480px) {
+    .required-note {
+        padding: 0.75rem;
+    }
+    
+    .form-container {
+        padding: 1rem;
+    }
+    
+    .hotel-dropdown {
+        max-height: 200px;
+    }
+    
+    .room-inputs {
+        grid-template-columns: 1fr;
+    }
+    
+    .conflict-tooltip {
+        max-width: 250px;
+        font-size: 0.85rem;
+    }
+}
